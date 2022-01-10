@@ -14,16 +14,16 @@ contract LotteryRewardPool is Ownable {
     address public adminAddress;
     address public receiver;
     IBEP20 public lptoken;
-    IBEP20 public cake;
+    IBEP20 public s33d;
 
     constructor(
         GrandGardener _gardener,
-        IBEP20 _cake,
+        IBEP20 _s33d,
         address _admin,
         address _receiver
     ) public {
         gardener = _gardener;
-        cake = _cake;
+        s33d = _s33d;
         adminAddress = _admin;
         receiver = _receiver;
     }
@@ -45,8 +45,8 @@ contract LotteryRewardPool is Ownable {
 
     function  harvest(uint256 _pid) external onlyAdmin {
         gardener.deposit(_pid, 0);
-        uint256 balance = cake.balanceOf(address(this));
-        cake.safeTransfer(receiver, balance);
+        uint256 balance = s33d.balanceOf(address(this));
+        s33d.safeTransfer(receiver, balance);
         emit Harvest(msg.sender, _pid);
     }
 
@@ -59,8 +59,8 @@ contract LotteryRewardPool is Ownable {
     }
 
     // EMERGENCY ONLY.
-    function emergencyWithdraw(IBEP20 _token, uint256 _amount) external onlyOwner {
-        cake.safeTransfer(address(msg.sender), _amount);
+    function emergencyWithdraw(uint256 _amount) external onlyOwner {
+        s33d.safeTransfer(address(msg.sender), _amount);
         emit EmergencyWithdraw(msg.sender, _amount);
     }
 

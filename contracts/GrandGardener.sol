@@ -75,7 +75,7 @@ contract GrandGardener is Ownable {
         uint256 _s33dPerBlock,
         uint256 _startBlock
     ) public {
-        s33d = s33d;
+        s33d = _s33d;
         devaddr = _devaddr;
         s33dPerBlock = _s33dPerBlock;
         startBlock = _startBlock;
@@ -183,7 +183,7 @@ contract GrandGardener is Ownable {
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 s33dReward = multiplier.mul(s33dPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        s33d.mint(devaddr, s33dReward.div(10));
+        s33d.mint(devaddr, s33dReward.div(33));
         s33d.mint(address(s33d), s33dReward);
         pool.accS33DPerShare = pool.accS33DPerShare.add(s33dReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;

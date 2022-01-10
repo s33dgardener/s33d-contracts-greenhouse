@@ -153,4 +153,20 @@ contract('GrandGardener', ([alice, bob, carol, dev, minter]) => {
         await this.gardener.dev(alice, { from: bob });
         assert.equal((await this.gardener.devaddr()).valueOf(), alice);
     })
+
+    it('safeS33DTransfer', async () => {
+      assert.equal(
+        (await this.s33d.balanceOf(this.s33d.address)).toString(),
+        '0'
+      );
+      await this.s33d.mint(this.s33d.address, 1000, { from: minter });
+      await this.s33d.safeS33DTransfer(bob, 200, { from: minter });
+      assert.equal((await this.s33d.balanceOf(bob)).toString(), '200');
+      assert.equal(
+        (await this.s33d.balanceOf(this.s33d.address)).toString(),
+        '800'
+      );
+      await this.s33d.safeS33DTransfer(bob, 2000, { from: minter });
+      assert.equal((await this.s33d.balanceOf(bob)).toString(), '1000');
+    });
 });
