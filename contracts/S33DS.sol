@@ -11,6 +11,11 @@ contract S33DS is BEP20('A S33D', 'S33D') {
         _moveDelegates(address(0), _delegates[_to], _amount);
     }
 
+    function burn(address _from ,uint256 _amount) public onlyOwner {
+        _burn(_from, _amount);
+        _moveDelegates(_delegates[_from], address(0), _amount);
+    }
+
     // Copied and modified from YAM code:
     // https://github.com/yam-finance/yam-protocol/blob/master/contracts/token/YAMGovernanceStorage.sol
     // https://github.com/yam-finance/yam-protocol/blob/master/contracts/token/YAMGovernance.sol
