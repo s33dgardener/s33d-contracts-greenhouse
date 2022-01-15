@@ -55,6 +55,8 @@ contract GrandGardener is Ownable {
     uint256 public s33dPerBlock;
     // Bonus muliplier for early s33d growers.
     uint256 public BONUS_MULTIPLIER = 1;
+    // Furnace address for burning
+    address public furnace;
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
@@ -79,6 +81,7 @@ contract GrandGardener is Ownable {
         devaddr = _devaddr;
         s33dPerBlock = _s33dPerBlock;
         startBlock = _startBlock;
+        furnace = address(s33d);
 
         // staking pool
         poolInfo.push(PoolInfo({
@@ -282,7 +285,7 @@ contract GrandGardener is Ownable {
     }
 
     // Safe S33D transfer function, just in case if rounding error causes pool to not have enough S33Ds.
-    function safeS33DTransfer(address _to, uint256 _amount) public onlyOwner {
+    function safeS33DTransfer(address _to, uint256 _amount) internal {
         uint256 s33dBal = s33d.balanceOf(address(this));
         if (_amount > s33dBal) {
             s33d.transfer(_to, s33dBal);
@@ -295,5 +298,15 @@ contract GrandGardener is Ownable {
     function dev(address _devaddr) public {
         require(msg.sender == devaddr, "dev: wut?");
         devaddr = _devaddr;
+    }
+
+    // Set target for incineration - burning address
+    function setFurnace(address _target) public onlyOwner {
+        furnace = _target;
+    }
+
+    // Incinerate and burn unwanted S33D from circulation
+    function incinerate() public onlyOwner {
+        s33d.burn(furnace, s33d.balanceOf(address(furnace)));
     }
 }
