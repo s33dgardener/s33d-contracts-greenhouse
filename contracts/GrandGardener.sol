@@ -140,7 +140,7 @@ contract GrandGardener is Ownable {
             points = points.add(poolInfo[pid].allocPoint);
         }
         if (points != 0) {
-            points = points.div(3);
+            points = points.div(4); // This defines the fraction for S33D - 20% of all S33D emission is exclusive to S33D stakers
             totalAllocPoint = totalAllocPoint.sub(poolInfo[0].allocPoint).add(points);
             poolInfo[0].allocPoint = points;
         }
@@ -186,6 +186,8 @@ contract GrandGardener is Ownable {
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 s33dReward = multiplier.mul(s33dPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        // S33DS contract's owner is transferred to GrandGardener after initial emission
+        // This is the only place where new S33D is introduced into the ecosystem
         s33d.mint(devaddr, s33dReward.div(33));
         s33d.mint(address(s33d), s33dReward);
         pool.accS33DPerShare = pool.accS33DPerShare.add(s33dReward.mul(1e12).div(lpSupply));
