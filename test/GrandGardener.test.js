@@ -1,32 +1,70 @@
 const { expectRevert, time } = require('@openzeppelin/test-helpers');
+const { assert } = require('chai');
+const chai = require('chai');
+const BN = require('bn.js');
 const S33DS = artifacts.require('S33DS');
 const GrandGardener = artifacts.require('GrandGardener');
 const MockBEP20 = artifacts.require('libs/MockBEP20');
+chai.use(require('chai-bn')(BN));
 
-contract('GrandGardener', ([alice, bob, carol, dev, minter]) => {
+contract('GrandGardener', ([alice, bob, carol, dev, burner, furnace, minter]) => {
     beforeEach(async () => {
         this.s33d = await S33DS.new({ from: minter });
+        // Create liquidity pools
         this.lp1 = await MockBEP20.new('LPToken', 'LP1', '1000000', { from: minter });
         this.lp2 = await MockBEP20.new('LPToken', 'LP2', '1000000', { from: minter });
         this.lp3 = await MockBEP20.new('LPToken', 'LP3', '1000000', { from: minter });
-        this.gardener = await GrandGardener.new(this.s33d.address, dev, '1000', '100', { from: minter });
+        // Mint some S33D to Carol
+        await this.s33d.mint(carol, 333333, { from: minter });
+        // Create new GrandGardener
+        this.gardener = await GrandGardener.new(this.s33d.address, dev, '33', '111', { from: minter });
+        // Transfer S33DS to GrandGardener
         await this.s33d.transferOwnership(this.gardener.address, { from: minter });
-
-        await this.lp1.transfer(bob, '2000', { from: minter });
-        await this.lp2.transfer(bob, '2000', { from: minter });
-        await this.lp3.transfer(bob, '2000', { from: minter });
-
+        // Deposit LP tokens to Alice
         await this.lp1.transfer(alice, '2000', { from: minter });
         await this.lp2.transfer(alice, '2000', { from: minter });
         await this.lp3.transfer(alice, '2000', { from: minter });
+        // Deposit LP tokens to Bob
+        await this.lp1.transfer(bob, '2000', { from: minter });
+        await this.lp2.transfer(bob, '2000', { from: minter });
+        await this.lp3.transfer(bob, '2000', { from: minter });
+    });
+    it('S33Ds issued to Carol', async () => {
+      	assert.equal((await this.s33d.balanceOf(carol)).toString(), '333333');
+  });
+    it('S33Ds staking, rewards and leave staking', async () => {
+		// Set multiplier
+		await this.gardener.updateMultiplier(1000, { from: minter });
+		// Pre-approval
+		await this.s33d.approve(this.gardener.address, 111111, { from: carol});
+		// Stake S33D
+        await this.gardener.enterStaking(111111, { from: carol});
+        assert.equal((await this.s33d.balanceOf(carol)).toString(), '222222');
+		// Check balance after some blocks before reward starts
+        await time.advanceBlockTo('50');
+        await this.gardener.updatePool(0);
+        assert.equal((await this.s33d.balanceOf(carol)).toString(), '222222');
+		assert.equal((await this.s33d.balanceOf(this.gardener.address)).toString(), '111111');
+		// Check rewards at the first reward block
+		await time.advanceBlockTo('111');
+        await this.gardener.updatePool(0);
+		assert.equal((await this.s33d.balanceOf(this.s33d.address)).toString(), '33000');
+		assert.equal((await this.s33d.balanceOf(carol)).toString(), '222222');
+		assert.equal((await this.s33d.balanceOf(this.gardener.address)).toString(), '111111');
+		assert.equal((await this.s33d.balanceOf(dev)).toString(), '1000');
+		assert.equal((await this.s33d.totalSupply()).toString(), '367333');
+		// What is owed to Carol by GrandGardener for staking
+		console.log('Pending S33D to Carol: ', await this.gardener.pendingS33D(0, carol, { from: carol}));
+		// Leave staking
+		console.log('Carol info: ', await this.gardener.userInfo(0, carol));
+		await this.gardener.leaveStaking(new BN(11111), { from: carol}); //// Problem here
+		console.log('S33D address balance: ', await this.s33d.balanceOf(this.s33d.address));
+		assert.equal((await this.s33d.balanceOf(this.s33d.address)).toString(), '66000');
+		assert.equal((await this.s33d.totalSupply()).toString(), '401333');
+		// assert.equal((await this.gardener.pendingS33D(0, carol), 6600));
+		assert.equal((await this.s33d.balanceOf(carol)).toString(), '299332'); //// Problem here
     });
     it('real case', async () => {
-      this.lp4 = await MockBEP20.new('LPToken', 'LP1', '1000000', { from: minter });
-      this.lp5 = await MockBEP20.new('LPToken', 'LP2', '1000000', { from: minter });
-      this.lp6 = await MockBEP20.new('LPToken', 'LP3', '1000000', { from: minter });
-      this.lp7 = await MockBEP20.new('LPToken', 'LP1', '1000000', { from: minter });
-      this.lp8 = await MockBEP20.new('LPToken', 'LP2', '1000000', { from: minter });
-      this.lp9 = await MockBEP20.new('LPToken', 'LP3', '1000000', { from: minter });
       await this.gardener.add('2000', this.lp1.address, true, { from: minter });
       await this.gardener.add('1000', this.lp2.address, true, { from: minter });
       await this.gardener.add('500', this.lp3.address, true, { from: minter });
