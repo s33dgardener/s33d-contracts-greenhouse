@@ -189,7 +189,7 @@ contract GrandGardener is Ownable {
         // S33DS contract's owner is transferred to GrandGardener after initial emission
         // This is the only place where new S33D is introduced into the ecosystem
         s33d.mint(devaddr, s33dReward.div(33));
-        s33d.mint(address(s33d), s33dReward);
+        s33d.mint(address(this), s33dReward);
         pool.accS33DPerShare = pool.accS33DPerShare.add(s33dReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
@@ -261,7 +261,7 @@ contract GrandGardener is Ownable {
     function leaveStaking(uint256 _amount) public {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[0][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
+        require(user.amount >= _amount, "withdraw: not good");   
         updatePool(0);
         uint256 pending = user.amount.mul(pool.accS33DPerShare).div(1e12).sub(user.rewardDebt);
         if(pending > 0) {
