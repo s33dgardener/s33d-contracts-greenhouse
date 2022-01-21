@@ -1,6 +1,7 @@
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const fs = require('fs');
 const mnemonic = fs.readFileSync(".secret").toString().trim();
+const { BSCSCANAPIKEY } = require('./env.json');
 
 module.exports = {
   networks: {
@@ -23,7 +24,8 @@ module.exports = {
       network_id: 56,
       confirmations: 10,
       timeoutBlocks: 200,
-      skipDryRun: true
+      skipDryRun: true,
+
     },
   },
 
@@ -37,5 +39,11 @@ module.exports = {
     solc: {
       version: "0.6.12", // A version or constraint - Ex. "^0.5.0"
     }
-  }
+  },
+  plugins: [
+    'truffle-plugin-verify'
+  ],
+  api_keys: {
+    bscscan: BSCSCANAPIKEY
+  },
 };

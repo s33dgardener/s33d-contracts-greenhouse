@@ -1,4 +1,5 @@
 const { expectRevert, time, BN } = require('@openzeppelin/test-helpers');
+const { web3 } = require('@openzeppelin/test-helpers/src/setup');
 const { expect } = require('chai');
 const S33DS = artifacts.require('S33DS');
 const GrandGardener = artifacts.require('GrandGardener');
@@ -39,6 +40,9 @@ contract('GrandGardener', ([alice, bob, carol, dev, burner, furnace, minter]) =>
       from: minter,
     });
     this.lp3 = await MockBEP20.new('LPToken', 'LP3', '1000000', {
+      from: minter,
+    });
+    this.lp4 = await MockBEP20.new('LPToken', 'LP4', '1000000', {
       from: minter,
     });
     // Mint some S33D to Carol
@@ -235,124 +239,129 @@ contract('GrandGardener', ([alice, bob, carol, dev, burner, furnace, minter]) =>
     // Carol balance after restaking
     carolWalletS33DBal = new BN(await this.s33d.balanceOf(carol));
     console.log('Carol remain balance after restake: ', web3.utils.fromWei(carolWalletS33DBal, 'ether'));
+    grandGardenerS33DBal = new BN(await this.s33d.balanceOf(this.gardener.address));
+    console.log('Balance in GrandGardener after restake:', web3.utils.fromWei(grandGardenerS33DBal.toString(), 'ether'));
+    userS33DStaked = await this.gardener.userInfo(0, carol);
+    console.log('userS33DStaked amount after restake:', web3.utils.fromWei(userS33DStaked.amount.toString(), 'ether'));
+    console.log('userS33DStaked rewardDebt after restake:', web3.utils.fromWei(userS33DStaked.rewardDebt, 'ether'));
+
+    // Carol pending S33D rewards
+    await this.gardener.updatePool(0);
+    var pendingS33DReward = new BN(await this.gardener.pendingS33D(0, carol, { from: carol }));
+    console.log('Pending S33D to Carol:', web3.utils.fromWei(pendingS33DReward.toString(), 'ether'));
+    expect(pendingS33DReward).to.be.bignumber.closeTo(web3.utils.toWei('33', 'ether'), web3.utils.toWei('10', 'finney'));
+
+    // Speed through some blocks
+    await time.advanceBlockTo('349');
+    var currentBlock = await time.latestBlock();
+    console.log('Current block: ', currentBlock.toString());
+    await this.gardener.updatePool(0);
+    var pendingS33DReward = new BN(await this.gardener.pendingS33D(0, carol, { from: carol }));
+    console.log('Pending S33D to Carol @', currentBlock.toString(), ':', web3.utils.fromWei(pendingS33DReward.toString(), 'ether'));
+
+    var pool = await this.gardener.poolInfo(0);
+    console.log('Last reward block after restake: ', pool.lastRewardBlock.toString());
+    console.log('accS33DPerShare after restake: ', pool.accS33DPerShare.toString());
   });
-  // it('real case', async () => {
-  //   await this.gardener.add('2000', this.lp1.address, true, { from: minter });
-  //   await this.gardener.add('1000', this.lp2.address, true, { from: minter });
-  //   await this.gardener.add('500', this.lp3.address, true, { from: minter });
-  //   await this.gardener.add('500', this.lp3.address, true, { from: minter });
-  //   await this.gardener.add('500', this.lp3.address, true, { from: minter });
-  //   await this.gardener.add('500', this.lp3.address, true, { from: minter });
-  //   await this.gardener.add('500', this.lp3.address, true, { from: minter });
-  //   await this.gardener.add('100', this.lp3.address, true, { from: minter });
-  //   await this.gardener.add('100', this.lp3.address, true, { from: minter });
-  //   assert.equal((await this.gardener.poolLength()).toString(), "10");
+  it('Add new pools', async () => {
+    await this.gardener.add('1000', this.lp1.address, true, { from: minter });
+    // Check allocation point breakdown after first add
+    totalAllocPoint = await this.gardener.totalAllocPoint();
+    console.log('Total allocation after allocating another 1000:', totalAllocPoint.toString());
+    expect(totalAllocPoint).is.bignumber.equal('1250');
 
-  //   await time.advanceBlockTo('170');
-  //   await this.lp1.approve(this.gardener.address, '1000', { from: alice });
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '0');
-  //   await this.gardener.deposit(1, '20', { from: alice });
-  //   await this.gardener.withdraw(1, '20', { from: alice });
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '263');
+    await this.gardener.add('1000', this.lp2.address, true, { from: minter });
+    // Check allocation point breakdown after second add
+    totalAllocPoint = await this.gardener.totalAllocPoint();
+    console.log('Total allocation after allocating another 1000:', totalAllocPoint.toString());
+    expect(totalAllocPoint).is.bignumber.equal('2500');
 
-  //   await this.s33d.approve(this.gardener.address, '1000', { from: alice });
-  //   await this.gardener.enterStaking('20', { from: alice });
-  //   await this.gardener.enterStaking('0', { from: alice });
-  //   await this.gardener.enterStaking('0', { from: alice });
-  //   await this.gardener.enterStaking('0', { from: alice });
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '993');
-  //   // assert.equal((await this.gardener.getPoolPoint(0, { from: minter })).toString(), '1900');
-  // })
+    await this.gardener.add('400', this.lp3.address, true, { from: minter });
+    // Check allocation point breakdown after third add
+    totalAllocPoint = await this.gardener.totalAllocPoint();
+    console.log('Total allocation after allocating another 400:', totalAllocPoint.toString());
+    expect(totalAllocPoint).is.bignumber.equal('3000');
 
-  // it('deposit/withdraw', async () => {
-  //   await this.gardener.add('1000', this.lp1.address, true, { from: minter });
-  //   await this.gardener.add('1000', this.lp2.address, true, { from: minter });
-  //   await this.gardener.add('1000', this.lp3.address, true, { from: minter });
+    await this.gardener.add('1600', this.lp4.address, true, { from: minter });
+    // Check allocation point breakdown after fourth add
+    totalAllocPoint = await this.gardener.totalAllocPoint();
+    console.log('Total allocation after allocating another 1600:', totalAllocPoint.toString());
+    expect(totalAllocPoint).is.bignumber.equal('5000');
 
-  //   await this.lp1.approve(this.gardener.address, '100', { from: alice });
-  //   await this.gardener.deposit(1, '20', { from: alice });
-  //   await this.gardener.deposit(1, '0', { from: alice });
-  //   await this.gardener.deposit(1, '40', { from: alice });
-  //   await this.gardener.deposit(1, '0', { from: alice });
-  //   assert.equal((await this.lp1.balanceOf(alice)).toString(), '1940');
-  //   await this.gardener.withdraw(1, '10', { from: alice });
-  //   assert.equal((await this.lp1.balanceOf(alice)).toString(), '1950');
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '999');
-  //   assert.equal((await this.s33d.balanceOf(dev)).toString(), '100');
+    // Check the total number of pools after adding
+    poolLength = await this.gardener.poolLength();
+    expect(poolLength).is.bignumber.equal('5');
+  });
+  it('Adding lpToken to S33D staking pool', async () => {
+    await this.gardener.add('1000', this.lp1.address, true, { from: minter });
+    await this.gardener.add('1000', this.lp2.address, true, { from: minter });
+    await this.gardener.add('400', this.lp3.address, true, { from: minter });
+    await this.gardener.add('1600', this.lp4.address, true, { from: minter });
 
-  //   await this.lp1.approve(this.gardener.address, '100', { from: bob });
-  //   assert.equal((await this.lp1.balanceOf(bob)).toString(), '2000');
-  //   await this.gardener.deposit(1, '50', { from: bob });
-  //   assert.equal((await this.lp1.balanceOf(bob)).toString(), '1950');
-  //   await this.gardener.deposit(1, '0', { from: bob });
-  //   assert.equal((await this.s33d.balanceOf(bob)).toString(), '125');
-  //   await this.gardener.emergencyWithdraw(1, { from: bob });
-  //   assert.equal((await this.lp1.balanceOf(bob)).toString(), '2000');
-  // })
+    // Advancing blocks
+    var currentBlock = await time.latestBlock();
+    console.log('Current block: ', currentBlock.toString());
 
-  // it('staking/unstaking', async () => {
-  //   await this.gardener.add('1000', this.lp1.address, true, { from: minter });
-  //   await this.gardener.add('1000', this.lp2.address, true, { from: minter });
-  //   await this.gardener.add('1000', this.lp3.address, true, { from: minter });
+    // Approve spending by GrandGardener
+    await this.lp1.approve(this.gardener.address, '1000', { from: alice });
+    aliceS33DBalance = await this.s33d.balanceOf(alice);
+    expect(aliceS33DBalance).is.bignumber.equal('0');
 
-  //   await this.lp1.approve(this.gardener.address, '10', { from: alice });
-  //   await this.gardener.deposit(1, '2', { from: alice }); //0
-  //   await this.gardener.withdraw(1, '2', { from: alice }); //1
+    // Deposit and withdraw from the staking pool
+    await this.gardener.deposit(1, '1000', { from: alice });
+    await this.gardener.withdraw(1, '1000', { from: alice });
+    aliceS33DBalance = await this.s33d.balanceOf(alice);
+    expect(aliceS33DBalance).is.bignumber.equal(web3.utils.toWei('6.6', 'ether'));
 
-  //   await this.s33d.approve(this.gardener.address, '250', { from: alice });
-  //   await this.gardener.enterStaking('240', { from: alice }); //3
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '10');
-  //   await this.gardener.enterStaking('10', { from: alice }); //4
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '249');
-  //   await this.gardener.leaveStaking(250);
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '749');
+    // Approve spending by GrandGardener
+    await this.s33d.approve(this.gardener.address, web3.utils.toWei('1000', 'ether'), { from: carol });
+    await this.lp1.approve(this.gardener.address, '1000', { from: alice });
+    await this.lp2.approve(this.gardener.address, '1000', { from: bob });
+    await this.lp3.approve(this.gardener.address, '1000', { from: bob });
+    aliceS33DBalance = await this.s33d.balanceOf(alice);
+    bobS33DBalance = await this.s33d.balanceOf(bob);
+    expect(aliceS33DBalance).is.bignumber.equal(web3.utils.toWei('6.6', 'ether'));
+    expect(bobS33DBalance).is.bignumber.equal('0');
 
-  // });
+    // Deposit into multiple staking pools
+    await this.gardener.enterStaking(web3.utils.toWei('1000', 'ether'), { from: carol });
+    await this.gardener.deposit(1, '1000', { from: alice });
+    await this.gardener.deposit(2, '1000', { from: bob });
+    await this.gardener.deposit(3, '1000', { from: bob });
 
-  // it('update multiplier', async () => {
-  //   await this.gardener.add('1000', this.lp1.address, true, { from: minter });
-  //   await this.gardener.add('1000', this.lp2.address, true, { from: minter });
-  //   await this.gardener.add('1000', this.lp3.address, true, { from: minter });
+    // Check staked amount is correct
+    var user0 = await this.gardener.userInfo(0, carol);
+    console.log('Carol balance in pool0: ', web3.utils.fromWei(user0.amount, 'ether'));
+    expect(user0.amount).is.bignumber.equal(web3.utils.toWei('1000', 'ether'));
+    var user1 = await this.gardener.userInfo(1, alice);
+    console.log('Alice balance in pool1: ', user1.amount.toString());
+    expect(user1.amount).is.bignumber.equal('1000');
+    var user2 = await this.gardener.userInfo(2, bob);
+    console.log('Bob balance in pool0: ', user2.amount.toString());
+    expect(user2.amount).is.bignumber.equal('1000');
+    var user3 = await this.gardener.userInfo(3, bob);
+    console.log('Bob balance in pool0: ', user3.amount.toString());
+    expect(user3.amount).is.bignumber.equal('1000');
 
-  //   await this.lp1.approve(this.gardener.address, '100', { from: alice });
-  //   await this.lp1.approve(this.gardener.address, '100', { from: bob });
-  //   await this.gardener.deposit(1, '100', { from: alice });
-  //   await this.gardener.deposit(1, '100', { from: bob });
-  //   await this.gardener.deposit(1, '0', { from: alice });
-  //   await this.gardener.deposit(1, '0', { from: bob });
+    // Withdraw stake
+    await this.gardener.withdraw(2, '1000', { from: bob });
+    await this.gardener.withdraw(1, '1000', { from: alice });
+    await this.gardener.withdraw(3, '1000', {from: bob});
+    await this.gardener.leaveStaking(web3.utils.toWei('1000', 'ether'), {from: carol});
 
-  //   await this.s33d.approve(this.gardener.address, '100', { from: alice });
-  //   await this.s33d.approve(this.gardener.address, '100', { from: bob });
-  //   await this.gardener.enterStaking('50', { from: alice });
-  //   await this.gardener.enterStaking('100', { from: bob });
-
-  //   await this.gardener.updateMultiplier('0', { from: minter });
-
-  //   await this.gardener.enterStaking('0', { from: alice });
-  //   await this.gardener.enterStaking('0', { from: bob });
-  //   await this.gardener.deposit(1, '0', { from: alice });
-  //   await this.gardener.deposit(1, '0', { from: bob });
-
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '700');
-  //   assert.equal((await this.s33d.balanceOf(bob)).toString(), '150');
-
-  //   await time.advanceBlockTo('265');
-
-  //   await this.gardener.enterStaking('0', { from: alice });
-  //   await this.gardener.enterStaking('0', { from: bob });
-  //   await this.gardener.deposit(1, '0', { from: alice });
-  //   await this.gardener.deposit(1, '0', { from: bob });
-
-  //   assert.equal((await this.s33d.balanceOf(alice)).toString(), '700');
-  //   assert.equal((await this.s33d.balanceOf(bob)).toString(), '150');
-
-  //   await this.gardener.leaveStaking('50', { from: alice });
-  //   await this.gardener.leaveStaking('100', { from: bob });
-  //   await this.gardener.withdraw(1, '100', { from: alice });
-  //   await this.gardener.withdraw(1, '100', { from: bob });
-
-  // });
-
+    aliceS33DBalance = await this.s33d.balanceOf(alice);
+    expect(aliceS33DBalance).is.bignumber.equal(web3.utils.toWei('33', 'ether'));
+    bobS33DBalance = await this.s33d.balanceOf(bob);
+    expect(bobS33DBalance).is.bignumber.equal(web3.utils.toWei('21.12', 'ether'));
+    carolS33DBalance = await this.s33d.balanceOf(carol);
+    expect(carolS33DBalance).is.bignumber.equal(web3.utils.toWei('300046.2', 'ether'));
+  });
+  it('S33D burning through furnace', async () => {
+    await this.gardener.setFurnace(carol, {from: minter});
+    await this.gardener.incinerate({from: minter});
+    carolS33DBalance = await this.s33d.balanceOf(carol);
+    expect(carolS33DBalance).is.bignumber.equal('0');
+  });
   // it('should allow dev and only dev to update dev', async () => {
   //     assert.equal((await this.gardener.devaddr()).valueOf(), dev);
   //     await expectRevert(this.gardener.dev(bob, { from: bob }), 'dev: wut?');
