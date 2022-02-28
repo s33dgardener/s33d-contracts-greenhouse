@@ -22,10 +22,11 @@ module.exports = {
     bsc: {
       provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
       network_id: 56,
-      confirmations: 10,
+      confirmations: 2,
       timeoutBlocks: 200,
       skipDryRun: true,
-
+      gasPrice: 10000000000,
+      networkCheckTimeout: 5000000,
     },
   },
 
@@ -37,7 +38,14 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.6.12", // A version or constraint - Ex. "^0.5.0"
+      version: "0.6.12", // A version or constraint - Ex. "^0.5.0",
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 5000   // Optimize for how many times you intend to run the code
+        },
+        evmVersion: "istanbul" // Default: "istanbul"
+      },
     }
   },
   plugins: [
