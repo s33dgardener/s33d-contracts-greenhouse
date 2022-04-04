@@ -32,7 +32,7 @@ contract FirstSale is Ownable {
 
     
 
-    enum State{beforeStart, running, afterEnd, halted}
+    enum State{running, ended, halted}
     State public icoState;
 
     mapping (uint256 => mapping (address => Contributor)) public contributor;
@@ -51,11 +51,8 @@ contract FirstSale is Ownable {
     ) public {
         s33d = _s33d;
         usdt = _usdt;
-        _deposit = deposit;
-        
-
-        
-
+        deposit = _deposit;
+        icoState = State.running;
     }
 
      function halt() public onlyOwner{
@@ -79,12 +76,12 @@ contract FirstSale is Ownable {
     function getCurrentState() public view returns(State) {
         if(icoState == State.halted){
             return State.halted;
-        }else if(block.timestamp < saleStart){
-            return State.beforeStart;
+        // }else if(block.timestamp < saleStart){        - include this if you don't want the sale to start right away
+        //     return State.beforeStart;
         }else if(block.timestamp >= saleStart && block.timestamp <= saleEnd){
             return State.running;
         }else{
-            return State.afterEnd;
+            return State.ended;
         }
     }
 
@@ -102,10 +99,9 @@ contract FirstSale is Ownable {
 
         uint s33dtokens = msg.value/tokenPrice;
 
-        uint s33dBalance = s33d.balanceOf(address(msg.sender));
 
-        s33dBalance += s33dtokens;
-        s33dBalance -= s33dtokens;
+        s33d._Balance += s33dtokens;
+        s33d._Balance -= s33dtokens;
 
         deposit.transfer(msg.value);
         emit BuyS33D(msg.sender, msg.value, s33dtokens);
