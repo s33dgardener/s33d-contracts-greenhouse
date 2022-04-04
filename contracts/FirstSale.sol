@@ -85,7 +85,11 @@ contract FirstSale is Ownable {
         }
     }
 
-    function invest() payable public returns(bool){
+   
+
+    
+
+    function invest(uint amount) payable public returns(bool){
         icoState = getCurrentState();
         require(icoState == State.running);
 
@@ -97,13 +101,20 @@ contract FirstSale is Ownable {
         contribution.amount = msg.value;
         contribution.index ++;
 
-        uint s33dtokens = msg.value/tokenPrice;
+        usdt.transfer(deposit, amount);
+
+        uint s33dtokens = amount/tokenPrice;
+
+        payS33d(s33dtokens);
+
+        s33d.transferFrom(owner, msg.sender, s33dtokens) //I think this will work if you want to keep s33d in your wallet 
+                                                         //instead of sending it to the contract, you just have to give the contract an allowance         
 
 
-        s33d._Balance += s33dtokens;
-        s33d._Balance -= s33dtokens;
+        // s33d._Balance(msg.sender) += s33dtokens;
+        // s33d._Balance() -= s33dtokens;
 
-        deposit.transfer(msg.value);
+        // deposit.transfer(msg.value);
         emit BuyS33D(msg.sender, msg.value, s33dtokens);
 
         return true;        
