@@ -105,9 +105,7 @@ contract FirstSale is Ownable {
 
         uint s33dtokens = amount/tokenPrice;
 
-        payS33d(s33dtokens);
-
-        s33d.transferFrom(owner, msg.sender, s33dtokens) //I think this will work if you want to keep s33d in your wallet 
+        s33d.transferFrom(this, msg.sender, s33dtokens) //I think this will work if you want to keep s33d in your wallet 
                                                          //instead of sending it to the contract, you just have to give the contract an allowance         
 
 
