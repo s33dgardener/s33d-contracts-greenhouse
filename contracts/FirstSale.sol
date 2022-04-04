@@ -13,6 +13,7 @@ contract FirstSale is Ownable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
+    address payable public deposit;
     uint tokenPrice = 1;
     uint public hardCap = 33333333;
     uint public raisedAmount;
@@ -20,11 +21,13 @@ contract FirstSale is Ownable {
     uint public saleEnd = block.timestamp + 604800; // one week from start of sale
     uint public tokenTradeStart = saleEnd + 604800; // can overide the transfer function and add a restriction on how quickly the tokens could be traded 
     uint public maxInvestment = 100;
-    uint public minInvestment = 0.1;
+    uint public minInvestment = 1;
+    
 
     // Info of contributors
     struct Contributor {
         uint amount;
+        uint index;
     }
 
     
@@ -43,12 +46,13 @@ contract FirstSale is Ownable {
     constructor(
         S33DS _s33d,
         IBEP20 _usdt,
-        address owner
+        address _deposit
         
     ) public {
         s33d = _s33d;
         usdt = _usdt;
-        owner = msg.sender;
+        _deposit = deposit;
+        
 
         
 
@@ -72,6 +76,18 @@ contract FirstSale is Ownable {
         return usdtBal;
     }
 
+    function getCurrentState() public view returns(State) {
+        if(icoState == State.halted){
+            return State.halted;
+        }else if(block.timestamp < saleStart){
+            return State.beforeStart;
+        }else if(block.timestamp >= saleStart && block.timestamp <= saleEnd){
+            return State.running;
+        }else{
+            return State.afterEnd;
+        }
+    }
+
     function invest() payable public returns(bool){
         icoState = getCurrentState();
         require(icoState == State.running);
@@ -80,19 +96,19 @@ contract FirstSale is Ownable {
         raisedAmount += msg.value;
         require(raisedAmount <= hardCap);
 
-        Contributor storage contribution;
-
+        Contributor memory contribution;
         contribution.amount = msg.value;
+        contribution.index ++;
 
         uint s33dtokens = msg.value/tokenPrice;
 
-        
+        uint s33dBalance = s33d.balanceOf(address(msg.sender));
 
-        s33d._balances[msg.sender] += s33dtokens;
-        s33d._balances[owner] -= s33dtokens;
+        s33dBalance += s33dtokens;
+        s33dBalance -= s33dtokens;
 
-        owner.transfer(msg.value);
-        emit BuyS33D(msg.sender, msg.value, tokens);
+        deposit.transfer(msg.value);
+        emit BuyS33D(msg.sender, msg.value, s33dtokens);
 
         return true;        
     }
