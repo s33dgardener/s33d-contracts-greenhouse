@@ -20,7 +20,7 @@ module.exports = {
       networkCheckTimeout: 5000000,
     },
     bsc: {
-      provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
+      provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed2.binance.org`),
       network_id: 56,
       confirmations: 2,
       timeoutBlocks: 200,

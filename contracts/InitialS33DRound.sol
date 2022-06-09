@@ -69,7 +69,7 @@ contract InitialS33DRound is Ownable {
 
     // Acquire S33D with USDT according to offer price
     function buyS33D(uint256 _amount) public {
-        uint256 totalPayable = _amount * offerPrice;
+        uint256 totalPayable = _amount * offerPrice / 1 ether;
         // Check that purchase does not exceed buy limit
         uint256 totalBought = contribution[msg.sender] + _amount;
         require(allowList[msg.sender] > 0, "buyS33D: not whitelisted - register on s33d.app");
@@ -88,12 +88,17 @@ contract InitialS33DRound is Ownable {
     }
 
     // Sets the number of S33D one wallet can buy
-    function setBuyLimit(uint256 _amount) public onlyOwner {
+    function setBuyLimit(uint256 _amount) external onlyOwner {
         buyLimit = _amount;
     }
 
+    // Sets the offer price of S33D
+    function setOfferPrice(uint256 _price) external onlyOwner {
+        offerPrice = _price;
+    }
+
     // Sends all proceeds to caller
-    function withdrawAllUSDT() public onlyOwner {
+    function withdrawAllUSDT() external onlyOwner {
         uint256 usdtBal = usdt.balanceOf(address(this));
         usdt.transfer(address(msg.sender), usdtBal);
     }
